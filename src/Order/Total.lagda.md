@@ -32,7 +32,7 @@ record is-total-order {o ℓ} (P : Poset o ℓ) : Type (o ⊔ ℓ) where
   open Poset P public
 
   field
-    compare         : ∀ x y → (x ≤ y) ⊎ (y ≤ x)
+    compare         : ∀ x y → (x ≤ y) ⊎ (y ≤ x × x ≠ y)
 ```
 
 ::: note
@@ -70,7 +70,7 @@ doing the comparison again: this "unblocks" the computation of $\min$.
     min-≤l : ∀ x y → min x y ≤ x
     min-≤l x y with compare x y
     ... | inl p = ≤-refl
-    ... | inr q = q
+    ... | inr (q , _) = q
 
     min-≤r : ∀ x y → min x y ≤ y
     min-≤r x y with compare x y
@@ -109,7 +109,7 @@ further commentary.
   max-≤r : ∀ x y → y ≤ max x y
   max-≤r x y with compare x y
   ... | inl p = ≤-refl
-  ... | inr q = q
+  ... | inr (q , _) = q
 
   max-univ : ∀ x y z → x ≤ z → y ≤ z → max x y ≤ z
   max-univ x y z p q with compare x y
@@ -182,7 +182,7 @@ which we refer to as **weak totality**.
   from-not-≤ : ∀ {x y} → ¬ (x ≤ y) → y ≤ x
   from-not-≤ {x} {y} ¬x≤y with compare x y
   ... | inl x≤y = absurd (¬x≤y x≤y)
-  ... | inr y≤x = y≤x
+  ... | inr (y≤x , _) = y≤x
 
 module _ {o ℓ} {P : Poset o ℓ} ⦃ _ : Discrete ⌞ P ⌟ ⦄ ⦃ _ : is-decidable-poset P ⦄ where
   open Poset P
@@ -201,10 +201,11 @@ if it holds, we're done; Otherwise, weak totality lets us conclude that
 $y \le x$ from the computed witness of $x \not\le y$.
 
 ```agda
-    compare : ∀ x y → (x ≤ y) ⊎ (y ≤ x)
-    compare x y with holds? (x ≤ y)
-    ... | yes x≤y = inl x≤y
-    ... | no ¬x≤y = inr (wk ¬x≤y)
+    compare : ∀ x y → (x ≤ y) ⊎ (y ≤ x × x ≠ y)
+    compare x y with holds? (x ≤ y) | holds? (x ≡ y)
+    ... | yes x≤y | _ = inl x≤y
+    ... | no ¬x≤y | yes x≡y = absurd (¬x≤y (≤-refl' x≡y))
+    ... | no ¬x≤y | no  x≠y = inr (wk ¬x≤y , x≠y)
 
     tot : is-total-order P
     tot = record { compare = compare }
